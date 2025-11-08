@@ -1,0 +1,286 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS Variables for Theme System */
+:root {
+  /* Light Theme Colors */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --border-primary: #e5e7eb;
+  --border-secondary: #d1d5db;
+  --accent-primary: #3b82f6;
+  --accent-primary-hover: #2563eb;
+  --accent-secondary: #f3f4f6;
+  --accent-secondary-hover: #e5e7eb;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  
+  /* Status Colors */
+  --status-pending: #fbbf24;
+  --status-pending-bg: #fef3c7;
+  --status-pending-text: #92400e;
+  --status-in-progress: #3b82f6;
+  --status-in-progress-bg: #dbeafe;
+  --status-in-progress-text: #1e40af;
+  --status-completed: #10b981;
+  --status-completed-bg: #d1fae5;
+  --status-completed-text: #065f46;
+  
+  /* Priority Colors */
+  --priority-low: #6b7280;
+  --priority-low-bg: #f3f4f6;
+  --priority-low-text: #374151;
+  --priority-medium: #f59e0b;
+  --priority-medium-bg: #fef3c7;
+  --priority-medium-text: #92400e;
+  --priority-high: #ef4444;
+  --priority-high-bg: #fee2e2;
+  --priority-high-text: #991b1b;
+}
+
+[data-theme="dark"] {
+  /* Dark Theme Colors */
+  --bg-primary: #111827;
+  --bg-secondary: #1f2937;
+  --bg-tertiary: #374151;
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-tertiary: #9ca3af;
+  --border-primary: #374151;
+  --border-secondary: #4b5563;
+  --accent-primary: #3b82f6;
+  --accent-primary-hover: #2563eb;
+  --accent-secondary: #374151;
+  --accent-secondary-hover: #4b5563;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+  
+  /* Status Colors - Dark Theme */
+  --status-pending: #fbbf24;
+  --status-pending-bg: #451a03;
+  --status-pending-text: #fbbf24;
+  --status-in-progress: #60a5fa;
+  --status-in-progress-bg: #1e3a8a;
+  --status-in-progress-text: #93c5fd;
+  --status-completed: #34d399;
+  --status-completed-bg: #064e3b;
+  --status-completed-text: #6ee7b7;
+  
+  /* Priority Colors - Dark Theme */
+  --priority-low: #9ca3af;
+  --priority-low-bg: #374151;
+  --priority-low-text: #d1d5db;
+  --priority-medium: #fbbf24;
+  --priority-medium-bg: #451a03;
+  --priority-medium-text: #fbbf24;
+  --priority-high: #f87171;
+  --priority-high-bg: #7f1d1d;
+  --priority-high-text: #fca5a5;
+}
+
+/* @layer base { */
+  /* * {
+    @apply border-border;
+  } */
+  
+  /* body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  } */
+/* } */
+
+@layer components {
+  .btn-primary {
+    background-color: var(--accent-primary);
+    color: white;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease-in-out;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .btn-primary:hover {
+    background-color: var(--accent-primary-hover);
+  }
+  
+  .btn-primary:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-primary);
+  }
+  
+  .btn-secondary {
+    background-color: var(--accent-secondary);
+    color: var(--text-primary);
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease-in-out;
+    border: 1px solid var(--border-primary);
+    cursor: pointer;
+  }
+  
+  .btn-secondary:hover {
+    background-color: var(--accent-secondary-hover);
+  }
+  
+  .btn-danger {
+    background-color: #ef4444;
+    color: white;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease-in-out;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .btn-danger:hover {
+    background-color: #dc2626;
+  }
+  
+  .input-field {
+    display: block;
+    width: 100%;
+    border-radius: 0.375rem;
+    border: 1px solid var(--border-primary);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease-in-out;
+  }
+  
+  .input-field:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 1px var(--accent-primary);
+  }
+  
+  .input-field::placeholder {
+    color: var(--text-tertiary);
+  }
+  
+  .card {
+    background-color: var(--bg-primary);
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-primary);
+    padding: 1.5rem;
+  }
+  
+  .task-status-pending {
+    background-color: var(--status-pending-bg);
+    color: var(--status-pending-text);
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  .task-status-in-progress {
+    background-color: var(--status-in-progress-bg);
+    color: var(--status-in-progress-text);
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  .task-status-completed {
+    background-color: var(--status-completed-bg);
+    color: var(--status-completed-text);
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  .priority-low {
+    background-color: var(--priority-low-bg);
+    color: var(--priority-low-text);
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  .priority-medium {
+    background-color: var(--priority-medium-bg);
+    color: var(--priority-medium-text);
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  .priority-high {
+    background-color: var(--priority-high-bg);
+    color: var(--priority-high-text);
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  /* Theme-aware utility classes */
+  .bg-theme-primary {
+    background-color: var(--bg-primary);
+  }
+  
+  .bg-theme-secondary {
+    background-color: var(--bg-secondary);
+  }
+  
+  .bg-theme-tertiary {
+    background-color: var(--bg-tertiary);
+  }
+  
+  .text-theme-primary {
+    color: var(--text-primary);
+  }
+  
+  .text-theme-secondary {
+    color: var(--text-secondary);
+  }
+  
+  .text-theme-tertiary {
+    color: var(--text-tertiary);
+  }
+  
+  .border-theme-primary {
+    border-color: var(--border-primary);
+  }
+  
+  .border-theme-secondary {
+    border-color: var(--border-secondary);
+  }
+  
+  .shadow-theme-sm {
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .shadow-theme-md {
+    box-shadow: var(--shadow-md);
+  }
+  
+  .shadow-theme-lg {
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
