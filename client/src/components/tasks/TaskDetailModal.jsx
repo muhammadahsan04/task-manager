@@ -1,5 +1,5 @@
 // import { useState, useEffect } from 'react';
-// import { X, Calendar, User, Flag, Clock, MessageSquare, Activity, Edit, Trash2, Send, Tag, CheckSquare, Plus } from 'lucide-react';
+// import { X, Calendar, User, Flag, Clock, MessageSquare, Activity, Edit, Trash2, Send, Tag, CheckSquare, Plus, Users } from 'lucide-react';
 // import AddTimeEntryModal from '../time/AddTimeEntryModal'
 // import api from '../../config/api';
 // import { useSelector } from 'react-redux';
@@ -1088,9 +1088,10 @@
 // export default TaskDetailModal;
 
 
-import { useState, useEffect } from 'react';
-import { X, Calendar, User, Flag, Clock, MessageSquare, Activity, Edit, Trash2, Send, Tag, CheckSquare, Plus } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, Calendar, User, Flag, Clock, MessageSquare, Activity, Edit, Trash2, Send, Tag, CheckSquare, Plus, Users } from 'lucide-react';
 import AddTimeEntryModal from '../time/AddTimeEntryModal'
+import DeleteConfirmationModal from '../common/DeleteConfirmationModal';
 import api from '../../config/api';
 import { useDispatch, useSelector } from 'react-redux';
 import { refreshTeams } from '../../store/slices/teamsSlice';
@@ -1122,27 +1123,76 @@ const TaskDetailModal = ({ isOpen, taskId, onClose, onTaskUpdated, onTaskDeleted
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [editingSubtaskId, setEditingSubtaskId] = useState(null);
   const [editingSubtaskTitle, setEditingSubtaskTitle] = useState('');
+  
+  // Delete confirmation modal state
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    type: null, // 'subtask', 'attachment', 'comment', 'task'
+    itemId: null,
+    itemName: null,
+    onConfirm: null
+  });
+  
+  // Track which tabs have been loaded to prevent redundant API calls
+  const loadedTabsRef = useRef(new Set());
+  // AbortController refs to cancel in-flight requests
+  const abortControllersRef = useRef({});
 
   // Fetch task + attachments once when modal opens or task changes
   useEffect(() => {
     if (isOpen && taskId) {
+      // Reset active tab to 'details' when modal opens
+      setActiveTab('details');
       fetchTaskDetails();
       fetchAttachments();
+      // Reset loaded tabs when task changes
+      loadedTabsRef.current = new Set();
+      // Cancel any in-flight requests
+      Object.values(abortControllersRef.current).forEach(controller => {
+        controller.abort();
+      });
+      abortControllersRef.current = {};
     }
   }, [isOpen, taskId]);
 
-  // Fetch tab-specific data when activeTab changes
+  // Fetch tab-specific data when activeTab changes (only if not already loaded)
   useEffect(() => {
     if (!isOpen || !taskId) return;
-    if (activeTab === 'comments') {
-      fetchComments();
-    } else if (activeTab === 'activity') {
-      fetchActivity();
-    } else if (activeTab === 'subtasks') {
-      fetchSubtasks();
-    } else if (activeTab === 'time') {
-      fetchTimeEntries();
+    
+    // Cancel any pending request for this tab
+    if (abortControllersRef.current[activeTab]) {
+      abortControllersRef.current[activeTab].abort();
     }
+    
+    // Only fetch if this tab hasn't been loaded yet
+    if (loadedTabsRef.current.has(activeTab)) {
+      return;
+    }
+    
+    const abortController = new AbortController();
+    abortControllersRef.current[activeTab] = abortController;
+    
+    // Mark tab as loaded after successful fetch
+    const markAsLoaded = () => {
+      loadedTabsRef.current.add(activeTab);
+      delete abortControllersRef.current[activeTab];
+    };
+    
+    if (activeTab === 'comments') {
+      fetchComments(abortController.signal, markAsLoaded);
+    } else if (activeTab === 'activity') {
+      fetchActivity(abortController.signal, markAsLoaded);
+    } else if (activeTab === 'subtasks') {
+      fetchSubtasks(abortController.signal, markAsLoaded);
+    } else if (activeTab === 'time') {
+      fetchTimeEntries(abortController.signal, markAsLoaded);
+    }
+    
+    return () => {
+      if (abortController) {
+        abortController.abort();
+      }
+    };
   }, [activeTab, isOpen, taskId]);
 
   const fetchTaskDetails = async () => {
@@ -1180,31 +1230,46 @@ const TaskDetailModal = ({ isOpen, taskId, onClose, onTaskUpdated, onTaskDeleted
   };
 
 
-  const fetchComments = async () => {
+  const fetchComments = async (signal = null, onSuccess = null) => {
     try {
-      const response = await api.get(`/comments/task/${taskId}`);
+      const config = signal ? { signal } : {};
+      const response = await api.get(`/comments/task/${taskId}`, config);
       setComments(response.data.comments);
+      if (onSuccess) onSuccess();
     } catch (error) {
-      console.error('Error fetching comments:', error);
+      // Don't log error if request was aborted
+      if (error.name !== 'AbortError' && error.name !== 'CanceledError') {
+        console.error('Error fetching comments:', error);
+      }
     }
   };
 
-  const fetchActivity = async () => {
+  const fetchActivity = async (signal = null, onSuccess = null) => {
     try {
-      const response = await api.get(`/comments/task/${taskId}/activity`);
+      const config = signal ? { signal } : {};
+      const response = await api.get(`/comments/task/${taskId}/activity`, config);
       setActivity(response.data.activity);
+      if (onSuccess) onSuccess();
     } catch (error) {
-      console.error('Error fetching activity:', error);
+      // Don't log error if request was aborted
+      if (error.name !== 'AbortError' && error.name !== 'CanceledError') {
+        console.error('Error fetching activity:', error);
+      }
     }
   };
 
-  const fetchSubtasks = async () => {
+  const fetchSubtasks = async (signal = null, onSuccess = null) => {
     try {
-      const res = await api.get(`/subtasks/task/${taskId}`)
+      const config = signal ? { signal } : {};
+      const res = await api.get(`/subtasks/task/${taskId}`, config)
       setSubtasks(Array.isArray(res.data?.subtasks) ? res.data.subtasks : [])
+      if (onSuccess) onSuccess();
     } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to load subtasks', e)
+      // Don't log error if request was aborted
+      if (e.name !== 'AbortError' && e.name !== 'CanceledError') {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load subtasks', e)
+      }
     }
   }
 
@@ -1234,15 +1299,23 @@ const TaskDetailModal = ({ isOpen, taskId, onClose, onTaskUpdated, onTaskDeleted
   }
 
   const deleteSubtask = async (id) => {
-    if (!window.confirm('Delete this subtask?')) return
-    try {
-      await api.delete(`/subtasks/${id}`)
-      setSubtasks((prev) => prev.filter((s) => s.id !== id))
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error('Delete subtask failed', e)
-      alert('Failed to delete subtask')
-    }
+    const subtask = subtasks.find(s => s.id === id);
+    setDeleteModal({
+      isOpen: true,
+      type: 'subtask',
+      itemId: id,
+      itemName: subtask?.title || 'this subtask',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/subtasks/${id}`)
+          setSubtasks((prev) => prev.filter((s) => s.id !== id))
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error('Delete subtask failed', e)
+          alert('Failed to delete subtask')
+        }
+      }
+    });
   }
 
   const beginEditSubtask = (s) => {
@@ -1275,9 +1348,10 @@ const TaskDetailModal = ({ isOpen, taskId, onClose, onTaskUpdated, onTaskDeleted
   const completedCount = subtasks.filter((s) => s.is_completed).length
   const totalSubtasks = subtasks.length
 
-  const fetchTimeEntries = async () => {
+  const fetchTimeEntries = async (signal = null, onSuccess = null) => {
     try {
-      const res = await api.get(`/time-entries/task/${taskId}`)
+      const config = signal ? { signal } : {};
+      const res = await api.get(`/time-entries/task/${taskId}`, config)
       setTimeEntries(Array.isArray(res.data?.entries) ? res.data.entries : [])
       // If API returns an active timer
       if (res.data?.active?.started_at) {
@@ -1287,9 +1361,13 @@ const TaskDetailModal = ({ isOpen, taskId, onClose, onTaskUpdated, onTaskDeleted
         setIsTimerRunning(false)
         setTimerStartedAt(null)
       }
+      if (onSuccess) onSuccess();
     } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to load time entries', e)
+      // Don't log error if request was aborted
+      if (e.name !== 'AbortError' && e.name !== 'CanceledError') {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load time entries', e)
+      }
     }
   }
 
@@ -1384,14 +1462,22 @@ const TaskDetailModal = ({ isOpen, taskId, onClose, onTaskUpdated, onTaskDeleted
   };
 
   const handleDeleteAttachment = async (attachmentId) => {
-    if (!window.confirm('Delete this attachment?')) return;
-    try {
-      await api.delete(`/attachments/${attachmentId}`);
-      setAttachments(attachments.filter(a => a.id !== attachmentId));
-    } catch (error) {
-      console.error('Error deleting attachment:', error);
-      alert('Failed to delete attachment');
-    }
+    const attachment = attachments.find(a => a.id === attachmentId);
+    setDeleteModal({
+      isOpen: true,
+      type: 'attachment',
+      itemId: attachmentId,
+      itemName: attachment?.file_name || 'this attachment',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/attachments/${attachmentId}`);
+          setAttachments(attachments.filter(a => a.id !== attachmentId));
+        } catch (error) {
+          console.error('Error deleting attachment:', error);
+          alert('Failed to delete attachment');
+        }
+      }
+    });
   };
 
   const handleStatusChange = async (newStatus) => {
@@ -1461,30 +1547,42 @@ const TaskDetailModal = ({ isOpen, taskId, onClose, onTaskUpdated, onTaskDeleted
   };
 
   const handleDeleteComment = async (commentId) => {
-    if (!window.confirm('Are you sure you want to delete this comment?')) return;
-
-    try {
-      await api.delete(`/comments/${commentId}`);
-      setComments(comments.filter(c => c.id !== commentId));
-    } catch (error) {
-      console.error('Error deleting comment:', error);
-      alert('Failed to delete comment');
-    }
+    setDeleteModal({
+      isOpen: true,
+      type: 'comment',
+      itemId: commentId,
+      itemName: 'this comment',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/comments/${commentId}`);
+          setComments(comments.filter(c => c.id !== commentId));
+        } catch (error) {
+          console.error('Error deleting comment:', error);
+          alert('Failed to delete comment');
+        }
+      }
+    });
   };
 
   const handleDeleteTask = async () => {
-    if (!window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) return;
-
-    try {
-      await api.delete(`/tasks/${taskId}`);
-      // Refresh teams cache since task deletion might affect team data
-      dispatch(refreshTeams());
-      if (onTaskDeleted) onTaskDeleted(taskId);
-      onClose();
-    } catch (error) {
-      console.error('Error deleting task:', error);
-      alert('Failed to delete task');
-    }
+    setDeleteModal({
+      isOpen: true,
+      type: 'task',
+      itemId: taskId,
+      itemName: task?.title || 'this task',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/tasks/${taskId}`);
+          // Refresh teams cache since task deletion might affect team data
+          dispatch(refreshTeams());
+          if (onTaskDeleted) onTaskDeleted(taskId);
+          onClose();
+        } catch (error) {
+          console.error('Error deleting task:', error);
+          alert('Failed to delete task');
+        }
+      }
+    });
   };
 
   const getStatusColor = (status) => {
@@ -1528,9 +1626,6 @@ const TaskDetailModal = ({ isOpen, taskId, onClose, onTaskUpdated, onTaskDeleted
     return new Date(date).toLocaleDateString();
   };
 
-  // eslint-disable-next-line no-console
-  console.log('TaskDetailModal render - isOpen:', isOpen, 'taskId:', taskId)
-  
   if (!isOpen) return null;
 
   return (
@@ -1636,6 +1731,14 @@ const TaskDetailModal = ({ isOpen, taskId, onClose, onTaskUpdated, onTaskDeleted
 
                   {/* Task Info Grid */}
                   <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <h3 className="text-sm font-medium text-theme-primary mb-2 flex items-center">
+                        <Users className="h-4 w-4 mr-2" />
+                        Team
+                      </h3>
+                      <p className="text-theme-primary">{task?.team_name || 'No team'}</p>
+                    </div>
+
                     <div>
                       <h3 className="text-sm font-medium text-theme-primary mb-2 flex items-center">
                         <User className="h-4 w-4 mr-2" />
@@ -1774,9 +1877,9 @@ const TaskDetailModal = ({ isOpen, taskId, onClose, onTaskUpdated, onTaskDeleted
                       {isDragging ? 'Release to upload files' : 'Drag and drop files here to upload'}
                     </div>
                     {attachments.length === 0 ? (
-                      <p className="text-sm text-theme-tertiary">No attachments yet</p>
+                      <p className="text-sm text-theme-tertiary mt-2">No attachments yet</p>
                     ) : (
-                      <ul className="divide-y divide-theme-primary border border-theme-primary rounded-lg overflow-hidden">
+                      <ul className="divide-y divide-theme-primary border border-theme-primary rounded-lg overflow-hidden mt-2">
                         {attachments.map((att) => (
                           <li key={att.id} className="flex items-center justify-between px-4 py-3">
                             <div className="min-w-0">
@@ -2173,6 +2276,26 @@ const TaskDetailModal = ({ isOpen, taskId, onClose, onTaskUpdated, onTaskDeleted
             onClose={() => setIsAddTimeModalOpen(false)}
             taskId={taskId}
             onCreated={() => fetchTimeEntries()}
+          />
+          <DeleteConfirmationModal
+            isOpen={deleteModal.isOpen}
+            onClose={() => setDeleteModal({ isOpen: false, type: null, itemId: null, itemName: null, onConfirm: null })}
+            onConfirm={deleteModal.onConfirm || (() => {})}
+            title={
+              deleteModal.type === 'task' ? 'Delete Task' :
+              deleteModal.type === 'subtask' ? 'Delete Subtask' :
+              deleteModal.type === 'attachment' ? 'Delete Attachment' :
+              deleteModal.type === 'comment' ? 'Delete Comment' :
+              'Confirm Delete'
+            }
+            message={
+              deleteModal.type === 'task' ? `Are you sure you want to delete "${deleteModal.itemName}"? This action cannot be undone.` :
+              deleteModal.type === 'subtask' ? `Are you sure you want to delete "${deleteModal.itemName}"?` :
+              deleteModal.type === 'attachment' ? `Are you sure you want to delete "${deleteModal.itemName}"?` :
+              deleteModal.type === 'comment' ? 'Are you sure you want to delete this comment?' :
+              `Are you sure you want to delete ${deleteModal.itemName || 'this item'}?`
+            }
+            itemName={deleteModal.itemName}
           />
           </>
         )}

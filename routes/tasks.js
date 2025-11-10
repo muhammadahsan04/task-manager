@@ -44,12 +44,14 @@ router.get('/team/:teamId', isAuthenticated, isTeamMember, async (req, res) => {
     let query = db('tasks')
       .leftJoin('users as assignee', 'tasks.assigned_to', 'assignee.id')
       .leftJoin('users as creator', 'tasks.created_by', 'creator.id')
+      .leftJoin('teams', 'tasks.team_id', 'teams.id')
       .where('tasks.team_id', teamId)
       .select(
         'tasks.*',
         db.raw('assignee.name as assignee_name'),
         db.raw('assignee.email as assignee_email'),
-        db.raw('creator.name as creator_name')
+        db.raw('creator.name as creator_name'),
+        db.raw('teams.name as team_name')
       )
       .orderBy('tasks.created_at', 'desc');
     

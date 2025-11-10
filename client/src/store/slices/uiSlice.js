@@ -4,8 +4,10 @@ const initialState = {
   showCreateTeamModal: false,
   showCreateTaskModal: false,
   showEditTaskModal: false,
+  showEditTeamModal: false,
   selectedTeamId: null,
   editingTaskId: null,
+  editingTeamId: null,
   teamsRefreshToken: 0,
   tasksRefreshToken: 0,
 };
@@ -34,6 +36,14 @@ const uiSlice = createSlice({
       state.showEditTaskModal = false;
       state.editingTaskId = null;
     },
+    openEditTeamModal(state, action) {
+      state.showEditTeamModal = true;
+      state.editingTeamId = action.payload || null;
+    },
+    closeEditTeamModal(state) {
+      state.showEditTeamModal = false;
+      state.editingTeamId = null;
+    },
     setSelectedTeam(state, action) {
       state.selectedTeamId = action.payload;
     },
@@ -53,6 +63,8 @@ export const {
   closeCreateTaskModal,
   openEditTaskModal,
   closeEditTaskModal,
+  openEditTeamModal,
+  closeEditTeamModal,
   setSelectedTeam,
   bumpTeamsRefresh,
   bumpTasksRefresh,

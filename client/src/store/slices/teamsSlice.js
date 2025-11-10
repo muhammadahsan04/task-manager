@@ -41,6 +41,19 @@ export const refreshTeams = createAsyncThunk(
   }
 );
 
+// Update team
+export const updateTeam = createAsyncThunk(
+  'teams/updateTeam',
+  async ({ teamId, updates }, { rejectWithValue }) => {
+    try {
+      const response = await api.put(`/teams/${teamId}`, updates);
+      return response.data.team;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Failed to update team');
+    }
+  }
+);
+
 const initialState = {
   teams: [],
   loading: false,
@@ -105,6 +118,22 @@ const teamsSlice = createSlice({
         state.loading = false;
         state.error = action.payload || 'Failed to refresh teams';
       })
+      .addCase(updateTeam.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateTeam.fulfilled, (state, action) => {
+        state.loading = false;
+        const index = state.teams.findIndex(team => team.id === action.payload.id);
+        if (index !== -1) {
+          state.teams[index] = action.payload;
+        }
+        state.error = null;
+      })
+      .addCase(updateTeam.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || 'Failed to update team';
+      })
       // Clear teams when user logs out
       .addCase(logout.fulfilled, (state) => {
         state.teams = [];
@@ -115,6 +144,6 @@ const teamsSlice = createSlice({
   },
 });
 
-export const { clearTeams, addTeam, updateTeam, removeTeam } = teamsSlice.actions;
+export const { clearTeams, addTeam, updateTeamLocal, removeTeam } = teamsSlice.actions;
 export default teamsSlice.reducer;
 

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import InviteMemberModal from './InviteMemberModal';
 import TeamMembersModal from './TeamMembersModal';
+import DeleteConfirmationModal from '../common/DeleteConfirmationModal';
 import { fetchTeams, refreshTeams, removeTeam } from '../../store/slices/teamsSlice';
 
 const TeamsList = memo(({ onCreateTeam, onEditTeam, onViewTeam, refreshTrigger }) => {
@@ -24,6 +25,12 @@ const TeamsList = memo(({ onCreateTeam, onEditTeam, onViewTeam, refreshTrigger }
   const [actionMenuOpen, setActionMenuOpen] = useState(null);
   const [inviteModalTeamId, setInviteModalTeamId] = useState(null);
   const [manageMembersTeam, setManageMembersTeam] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    teamId: null,
+    teamName: null,
+    onConfirm: null
+  });
 
   // Fetch teams on mount - will use cache if available
   useEffect(() => {
@@ -38,20 +45,23 @@ const TeamsList = memo(({ onCreateTeam, onEditTeam, onViewTeam, refreshTrigger }
   }, [refreshTrigger, dispatch]);
 
   const handleDeleteTeam = async (teamId, teamName) => {
-    if (!window.confirm(`Are you sure you want to delete "${teamName}"? This action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      await api.delete(`/teams/${teamId}`);
-      dispatch(removeTeam(teamId));
-      // Also refresh to ensure cache is fully updated
-      dispatch(refreshTeams());
-      setActionMenuOpen(null);
-    } catch (error) {
-      console.error('Error deleting team:', error);
-      alert('Failed to delete team');
-    }
+    setDeleteModal({
+      isOpen: true,
+      teamId,
+      teamName,
+      onConfirm: async () => {
+        try {
+          await api.delete(`/teams/${teamId}`);
+          dispatch(removeTeam(teamId));
+          // Also refresh to ensure cache is fully updated
+          dispatch(refreshTeams());
+          setActionMenuOpen(null);
+        } catch (error) {
+          console.error('Error deleting team:', error);
+          alert('Failed to delete team');
+        }
+      }
+    });
   };
 
   const openInviteModal = useCallback((teamId) => {
@@ -278,6 +288,15 @@ const TeamsList = memo(({ onCreateTeam, onEditTeam, onViewTeam, refreshTrigger }
         teamId={manageMembersTeam?.id}
         currentUserTeamRole={manageMembersTeam?.role}
         onClose={() => setManageMembersTeam(null)}
+      />
+
+      <DeleteConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, teamId: null, teamName: null, onConfirm: null })}
+        onConfirm={deleteModal.onConfirm || (() => {})}
+        title="Delete Team"
+        message={`Are you sure you want to delete "${deleteModal.teamName}"? This action cannot be undone.`}
+        itemName={deleteModal.teamName}
       />
     </div>
   );

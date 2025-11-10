@@ -7,6 +7,7 @@ import Dashboard from './components/dashboard/Dashboard';
 import TeamsList from './components/teams/TeamsList';
 import AcceptInvite from './components/teams/AcceptInvite';
 import CreateTeamModal from './components/teams/CreateTeamModal';
+import EditTeamModal from './components/teams/EditTeamModal';
 import TasksList from './components/tasks/TasksList';
 import CalendarView from './components/calendar/CalendarView';
 import Reports from './components/reports/Reports';
@@ -24,6 +25,8 @@ import {
   closeCreateTaskModal,
   openEditTaskModal,
   closeEditTaskModal,
+  openEditTeamModal,
+  closeEditTeamModal,
   setSelectedTeam,
   bumpTeamsRefresh,
   bumpTasksRefresh,
@@ -87,8 +90,10 @@ const AppContent = () => {
   const showCreateTeamModal = useSelector((s) => s.ui.showCreateTeamModal);
   const showCreateTaskModal = useSelector((s) => s.ui.showCreateTaskModal);
   const showEditTaskModal = useSelector((s) => s.ui.showEditTaskModal);
+  const showEditTeamModal = useSelector((s) => s.ui.showEditTeamModal);
   const selectedTeam = useSelector((s) => s.ui.selectedTeamId);
   const editingTask = useSelector((s) => s.ui.editingTaskId);
+  const editingTeam = useSelector((s) => s.ui.editingTeamId);
   const teamsRefreshTrigger = useSelector((s) => s.ui.teamsRefreshToken);
   const tasksRefreshTrigger = useSelector((s) => s.ui.tasksRefreshToken);
   const updateTaskCallbackRef = useRef(null);
@@ -129,8 +134,8 @@ const AppContent = () => {
 
   // Handle team editing
   const handleEditTeam = useCallback((teamId) => {
-    console.log('Edit team:', teamId);
-  }, []);
+    dispatch(openEditTeamModal(teamId));
+  }, [dispatch]);
 
   // Handle task editing
   const handleEditTask = useCallback((taskId) => {
@@ -159,6 +164,12 @@ const AppContent = () => {
       // Refresh teams cache when task is updated
       dispatch(refreshTeams());
     }
+  }, [dispatch]);
+  const handleCloseEditTeam = useCallback(() => {
+    dispatch(closeEditTeamModal());
+    // Refresh teams to ensure UI is updated
+    dispatch(refreshTeams());
+    dispatch(bumpTeamsRefresh());
   }, [dispatch]);
 
   // Stable modal open handlers
@@ -338,6 +349,12 @@ const AppContent = () => {
         isOpen={showEditTaskModal}
         taskId={editingTask}
         onClose={handleCloseEditTask}
+      />
+
+      <EditTeamModal
+        isOpen={showEditTeamModal}
+        teamId={editingTeam}
+        onClose={handleCloseEditTeam}
       />
     </>
   );

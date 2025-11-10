@@ -3,9 +3,10 @@ import { useSelector, useDispatch } from 'react-redux'
 import { useLocation } from 'react-router-dom'
 import api from "../../config/api"
 import { refreshTeams } from '../../store/slices/teamsSlice'
-import { Plus, CheckSquare, Search, Calendar, User, Flag, MoreVertical, Edit, Trash2, Tag } from "lucide-react"
+import { Plus, CheckSquare, Search, Calendar, User, Flag, MoreVertical, Edit, Trash2, Tag, Users } from "lucide-react"
 import CreateLabelModal from "../labels/CreateLabelModal"
 import TaskDetailModal from "./TaskDetailModal"
+import DeleteConfirmationModal from "../common/DeleteConfirmationModal"
 
 const TasksList = memo(({ onCreateTask, onEditTask, onTaskUpdated, selectedTeam, refreshTrigger }) => {
   const dispatch = useDispatch()
@@ -25,6 +26,12 @@ const TasksList = memo(({ onCreateTask, onEditTask, onTaskUpdated, selectedTeam,
   const [actionMenuOpen, setActionMenuOpen] = useState(null)
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
   const [activeTaskId, setActiveTaskId] = useState(null)
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    taskId: null,
+    taskTitle: null,
+    onConfirm: null
+  })
   const isInitialMount = useRef(true)
 
   // Debug: Monitor state changes
@@ -163,20 +170,23 @@ const TasksList = memo(({ onCreateTask, onEditTask, onTaskUpdated, selectedTeam,
 
   const handleDeleteTask = useCallback(
     async (taskId, taskTitle) => {
-      if (!window.confirm(`Are you sure you want to delete "${taskTitle}"? This action cannot be undone.`)) {
-        return
-      }
-
-      try {
-        await api.delete(`/tasks/${taskId}`)
-        setTasks(tasks.filter((task) => task.id !== taskId))
-        // Refresh teams cache since task deletion might affect team data
-        dispatch(refreshTeams())
-        setActionMenuOpen(null)
-      } catch (error) {
-        console.error("Error deleting task:", error)
-        alert("Failed to delete task")
-      }
+      setDeleteModal({
+        isOpen: true,
+        taskId,
+        taskTitle,
+        onConfirm: async () => {
+          try {
+            await api.delete(`/tasks/${taskId}`)
+            setTasks(tasks.filter((task) => task.id !== taskId))
+            // Refresh teams cache since task deletion might affect team data
+            dispatch(refreshTeams())
+            setActionMenuOpen(null)
+          } catch (error) {
+            console.error("Error deleting task:", error)
+            alert("Failed to delete task")
+          }
+        }
+      })
     },
     [tasks, dispatch],
   )
@@ -495,6 +505,14 @@ const TasksList = memo(({ onCreateTask, onEditTask, onTaskUpdated, selectedTeam,
 
                   {/* Meta */}
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-theme-tertiary">
+                    {task.team_name && (
+                      <div className="flex items-center">
+                        <Users className="h-4 w-4 mr-1" aria-hidden="true" />
+                        <span className="sr-only">Team:</span>
+                        {task.team_name}
+                      </div>
+                    )}
+
                     {task.assignee_name && (
                       <div className="flex items-center">
                         <User className="h-4 w-4 mr-1" aria-hidden="true" />
@@ -653,6 +671,16 @@ const TasksList = memo(({ onCreateTask, onEditTask, onTaskUpdated, selectedTeam,
           // Ensure labels dropdown refreshes after creating a label
           refreshLabels()
         }}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, taskId: null, taskTitle: null, onConfirm: null })}
+        onConfirm={deleteModal.onConfirm || (() => {})}
+        title="Delete Task"
+        message={`Are you sure you want to delete "${deleteModal.taskTitle}"? This action cannot be undone.`}
+        itemName={deleteModal.taskTitle}
       />
     </div>
   )
